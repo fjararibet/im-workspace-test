@@ -1,0 +1,308 @@
+# Copyright 2019 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+timeout: 5400s
+steps:
+- id: swap-module-refs
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['module-swapper']
+- id: prepare
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && prepare_environment']
+  env:
+  - 'TF_VAR_org_id=$_ORG_ID'
+  - 'TF_VAR_folder_id=$_FOLDER_ID'
+  - 'TF_VAR_billing_account=$_BILLING_ACCOUNT'
+  - 'TF_VAR_group_org_admins=test-gcp-org-admins@test.blueprints.joonix.net'
+  - 'TF_VAR_group_billing_admins=test-gcp-billing-admins@test.blueprints.joonix.net'
+  secretEnv: ['IM_GITHUB_PAT', 'IM_GITLAB_PAT']
+- id: init-all
+  waitFor:
+    - prepare
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run all --stage init --verbose']
+  secretEnv: ['IM_GITHUB_PAT', 'IM_GITLAB_PAT']
+- id: create-all
+  waitFor:
+    - init-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do create']
+  secretEnv: ['IM_GITHUB_PAT', 'IM_GITLAB_PAT']
+- id: converge-simple
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do converge simple-default']
+- id: verify-simple
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do verify simple-default']
+- id: destroy-simple
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do destroy simple-default']
+  # Required to rerun to reinstate ci-integration account as project creator as not member of group_org_admins.
+- id: prepare-rerun-cloudbuild-enabled
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && prepare_environment']
+  env:
+  - 'TF_VAR_org_id=$_ORG_ID'
+  - 'TF_VAR_folder_id=$_FOLDER_ID'
+  - 'TF_VAR_billing_account=$_BILLING_ACCOUNT'
+  - 'TF_VAR_group_org_admins=test-gcp-org-admins@test.blueprints.joonix.net'
+  - 'TF_VAR_group_billing_admins=test-gcp-billing-admins@test.blueprints.joonix.net'
+- id: converge-cloudbuild-enabled
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do converge cloudbuild-enabled-default']
+- id: verify-cloudbuild-enabled
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do verify cloudbuild-enabled-default']
+- id: destroy-cloudbuild-enabled
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do destroy cloudbuild-enabled-default']
+  # Required to rerun to reinstate ci-integration account as project creator as not member of group_org_admins.
+- id: prepare-rerun-simple-folder
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && prepare_environment']
+  env:
+  - 'TF_VAR_org_id=$_ORG_ID'
+  - 'TF_VAR_folder_id=$_FOLDER_ID'
+  - 'TF_VAR_billing_account=$_BILLING_ACCOUNT'
+  - 'TF_VAR_group_org_admins=test-gcp-org-admins@test.blueprints.joonix.net'
+  - 'TF_VAR_group_billing_admins=test-gcp-billing-admins@test.blueprints.joonix.net'
+- id: converge-simple-folder
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do converge simple-folder-default']
+- id: verify-simple-folder
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do verify simple-folder-default']
+- id: destroy-simple-folder
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'source /usr/local/bin/task_helper_functions.sh && kitchen_do destroy simple-folder-default']
+
+- id: apply-tfsource
+  waitFor:
+      - destroy-simple-folder
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildSourceSimple --stage apply --verbose']
+- id: verify-tfsource
+  waitFor:
+      - apply-tfsource
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildSourceSimple --stage verify --verbose']
+- id: teardown-tfsource
+  waitFor:
+      - verify-tfsource
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildSourceSimple --stage teardown --verbose']
+
+- id: apply-tfbuilder
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildBuilder --stage apply --verbose']
+- id: verify-tfbuilder
+  waitFor:
+      - apply-tfbuilder
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildBuilder --stage verify --verbose']
+
+- id: apply-tfbuilder-github
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildBuilderGitHub --stage apply --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+- id: verify-tfbuilder-github
+  waitFor:
+      - apply-tfbuilder-github
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildBuilderGitHub --stage verify --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+
+- id: apply-tfbuilder-gitlab
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildBuilderGitLab --stage apply --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+- id: verify-tfbuilder-gitlab
+  waitFor:
+      - apply-tfbuilder-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildBuilderGitLab --stage verify --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+
+- id: teardown-tfbuilder
+  waitFor:
+      - verify-tfbuilder
+      - verify-tfbuilder-github
+      - verify-tfbuilder-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildBuilder --stage teardown --verbose']
+- id: teardown-tfbuilder-github
+  waitFor:
+      - verify-tfbuilder
+      - verify-tfbuilder-github
+      - verify-tfbuilder-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildBuilderGitHub --stage teardown --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+- id: teardown-tfbuilder-gitlab
+  waitFor:
+      - verify-tfbuilder
+      - verify-tfbuilder-github
+      - verify-tfbuilder-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildBuilderGitLab --stage teardown --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+
+- id: apply-tfworkspace
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildWorkspaceSimple --stage apply --verbose']
+- id: verify-tfworkspace
+  waitFor:
+      - apply-tfworkspace
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildWorkspaceSimple --stage verify --verbose']
+- id: teardown-tfworkspace
+  waitFor:
+      - verify-tfworkspace
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestTFCloudBuildWorkspaceSimple --stage teardown --verbose']
+
+- id: apply-imworkspace-github
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestIMCloudBuildWorkspaceGitHub --stage apply --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+- id: verify-imworkspace-github
+  waitFor:
+      - apply-imworkspace-github
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestIMCloudBuildWorkspaceGitHub --stage verify --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+- id: teardown-imworkspace-github
+  waitFor:
+      - verify-imworkspace-github
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestIMCloudBuildWorkspaceGitHub --stage teardown --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+
+- id: apply-imworkspace-gitlab
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestIMCloudBuildWorkspaceGitLab --stage apply --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+- id: verify-imworkspace-gitlab
+  waitFor:
+      - apply-imworkspace-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestIMCloudBuildWorkspaceGitLab --stage verify --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+- id: teardown-imworkspace-gitlab
+  waitFor:
+      - verify-imworkspace-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestIMCloudBuildWorkspaceGitLab --stage teardown --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+
+- id: apply-tfworkspace-github
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildWorkspaceSimpleGitHub --stage apply --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+- id: verify-tfworkspace-github
+  waitFor:
+      - apply-tfworkspace-github
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildWorkspaceSimpleGitHub --stage verify --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+- id: teardown-tfworkspace-github
+  waitFor:
+      - verify-tfworkspace-github
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildWorkspaceSimpleGitHub --stage teardown --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+
+- id: apply-tfworkspace-gitlab
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildWorkspaceSimpleGitLab --stage apply --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+- id: verify-tfworkspace-gitlab
+  waitFor:
+      - apply-tfworkspace-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildWorkspaceSimpleGitLab --stage verify --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+- id: teardown-tfworkspace-gitlab
+  waitFor:
+      - verify-tfworkspace-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildWorkspaceSimpleGitLab --stage teardown --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+
+- id: apply-cloudbuild-connection-github
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildRepoConnectionGithub --stage apply --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+- id: verify-cloudbuild-connection-github
+  waitFor:
+      - apply-cloudbuild-connection-github
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildRepoConnectionGithub --stage verify --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+- id: teardown-cloudbuild-connection-github
+  waitFor:
+      - verify-cloudbuild-connection-github
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildRepoConnectionGithub --stage teardown --verbose']
+  secretEnv: ['IM_GITHUB_PAT']
+
+- id: apply-cloudbuild-connection-gitlab
+  waitFor:
+      - create-all
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildRepoConnectionGitLab --stage apply --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+- id: verify-cloudbuild-connection-gitlab
+  waitFor:
+      - apply-cloudbuild-connection-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildRepoConnectionGitLab --stage verify --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+- id: teardown-cloudbuild-connection-gitlab
+  waitFor:
+      - verify-cloudbuild-connection-gitlab
+  name: 'gcr.io/cloud-foundation-cicd/$_DOCKER_IMAGE_DEVELOPER_TOOLS:$_DOCKER_TAG_VERSION_DEVELOPER_TOOLS'
+  args: ['/bin/bash', '-c', 'cft test run TestCloudBuildRepoConnectionGitLab --stage teardown --verbose']
+  secretEnv: ['IM_GITLAB_PAT']
+
+availableSecrets:
+  secretManager:
+  - versionName: $_IM_GITHUB_PAT_SECRET_ID/versions/latest
+    env: 'IM_GITHUB_PAT'
+  - versionName: $_IM_GITLAB_PAT_SECRET_ID/versions/latest
+    env: 'IM_GITLAB_PAT'
+tags:
+- 'ci'
+- 'integration'
+substitutions:
+  _DOCKER_IMAGE_DEVELOPER_TOOLS: 'cft/developer-tools'
+  _DOCKER_TAG_VERSION_DEVELOPER_TOOLS: '1.25'

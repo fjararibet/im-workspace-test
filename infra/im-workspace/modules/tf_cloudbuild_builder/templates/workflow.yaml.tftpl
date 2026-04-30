@@ -1,0 +1,48 @@
+main:
+    steps:
+    - getLatestTFRelease:
+        call: http.get
+        args:
+            url: https://api.github.com/repos/hashicorp/terraform/releases/latest
+        result: latestTFRelease
+    - findLatestTFReleaseVersion:
+       assign:
+            - latestTFReleaseVersion: $${latestTFRelease.body.name}
+            - latestTFReleaseVersionNum: $${text.replace_all(latestTFReleaseVersion,"v","")}
+            - latestTFReleaseSplit: $${text.split(latestTFReleaseVersionNum,".")}
+            - latestTFReleaseMinor: $${latestTFReleaseSplit[0] + "." + latestTFReleaseSplit[1]}
+            - latestTFReleaseMajor: $${latestTFReleaseSplit[0]}
+    - checkIfRunnerExists:
+        try:
+            call: http.get
+            args:
+                url: $${"https://artifactregistry.googleapis.com/v1beta2/projects/${project_id}/locations/${gar_repo_location}/repositories/${gar_repo_name}/packages/terraform/tags/"+latestTFReleaseVersion}
+                auth:
+                    type: OAuth2
+            result: currentRunner
+        except:
+            as: e
+            steps:
+                - known_errors:
+                    switch:
+                        - condition: $${e.code == 404}
+                          next: triggerRunnerBuild
+                - unhandled_exception:
+                    raise: $${e}
+    - logAndExit:
+        return: $${"Found latest runner for "+latestTFReleaseVersion+" as "+currentRunner.body.version+", skipping build."}
+
+    - triggerRunnerBuild:
+        call: http.post
+        args:
+            url: $${"https://cloudbuild.googleapis.com/v1/projects/${project_id}/locations/${location}/triggers/${trigger_hash}:run"}
+            auth:
+                type: OAuth2
+            body:
+                projectId: ${project_id}
+                triggerId: ${trigger_id}
+                source:
+                    substitutions:
+                        _TERRAFORM_FULL_VERSION: $${latestTFReleaseVersionNum}
+                        _TERRAFORM_MINOR_VERSION: $${latestTFReleaseMinor}
+                        _TERRAFORM_MAJOR_VERSION: $${latestTFReleaseMajor}
