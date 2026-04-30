@@ -1,6 +1,5 @@
 module "im-workspace" {
-  source = "terraform-google-modules/bootstrap/google//modules/im_cloudbuild_workspace"
-  version = "~> 12.0"
+  source = "./im-workspace/modules/im_cloudbuild_workspace"
 
   tf_version = "1.5.7"
   infra_manager_sa_roles = ["roles/owner"]
